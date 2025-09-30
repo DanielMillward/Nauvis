@@ -7,6 +7,8 @@ import { ContainerHolder } from './containerHolder';
 // https://factorio.com/blog/post/fff-214
 // https://dev.to/jhmciberman/procedural-pixel-art-tilemaps-57e2
 
+// Different approach: https://www.reddit.com/r/factorio/comments/f0djpp/friday_facts_333_terrain_scrolling/
+
 export class Nauvis {
 
   app!: Application;
@@ -111,12 +113,13 @@ export class Nauvis {
             }),
             x: i,
             y: j,
-            scaleX: 1 / frame.width, // height/width
-            scaleY: 1 / frame.height,
+            scaleX: (1 / frame.width) * 1.001, // height/width. 1.1 Is to prevent flickering between
+            scaleY: (1 / frame.height) * 1.001,
           }));
         }
       }
-      // TODO: Loop over it again, this time adding borders if needed
+      // TODO: Loop over it again, this time adding borders if needed]
+      // TODO: Check if neighboring chunks exist, if so update your/their borders
       for (let biome of Object.values(this.biomes)) {
         for (const direction of this.chunks[coordName].Directions) {
           // If no borders were given for this biome, don't loop through the whole chunk
