@@ -97,7 +97,7 @@ export class Biome {
         const tileOffsetY = gTileY - tlMatY;
 
         // 3) Material frame rect (the spritesheet region for this material square)
-        const materialRect = this.getMaterial(matX, matY);
+        const materialRect = GetWeightedFrame(matX, matY, this.materialFrames);
 
         // 4) Pixel size of one tile inside that rect
         const tilePxSize = materialRect.width / this.materialTileSize; // assumes square; use height similarly if needed
@@ -109,19 +109,21 @@ export class Biome {
         return new Rectangle(tileFrameX, tileFrameY, tilePxSize, tilePxSize);
     }
 
-    getMaterial(x: number, y: number): Rectangle {
-        const randFloat = hash2d_float01(x, y)
-        let counter = 0;
-        for (let i = 0; i < this.materialFrames.length; i++) {
-            if (randFloat < counter + this.materialFrames[i].normWeight) {
-                return this.materialFrames[i].frame
-            }
-            counter = counter + this.materialFrames[i].normWeight
-        }
-        throw new Error("counting went above 1??")
-    }
+
 }
 
+
+export function GetWeightedFrame(x: number, y: number, frames: WeightedFrame[]): Rectangle {
+    const randFloat = hash2d_float01(x, y)
+    let counter = 0;
+    for (let i = 0; i < frames.length; i++) {
+        if (randFloat < counter + frames[i].normWeight) {
+            return frames[i].frame
+        }
+        counter = counter + frames[i].normWeight
+    }
+    throw new Error("counting went above 1??")
+}
 interface WeightedFrame {
     frame: Rectangle;
     normWeight: number;

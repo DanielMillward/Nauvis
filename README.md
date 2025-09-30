@@ -1,0 +1,11 @@
+TODO list:
+- borders between tiles (main.ts:119)
+    - borders between chunk boundaries?
+- only render chunks in view
+- make tiles updateable
+- fix weird blank spots that show when zooming sometimes
+- entities
+    - animated
+- UI
+- Input handling
+- minimap

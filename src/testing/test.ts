@@ -1,6 +1,9 @@
 import { Nauvis, TileOptions } from '../main.js';
+import { FractalBrownianMotion } from '../noise.js';
 
-const tileOptionsJSON = `{
+const tileOptionsJSON = `
+
+{
   "source": "../assets/images/tiles.png",
 
   "materialTileSideLength": 4,
@@ -17,11 +20,20 @@ const tileOptionsJSON = `{
     {
       "id": "grass",
       "materials": [
-        { "x": 0, "y": 0, "weight": 5 },
-        { "x": 32, "y": 0, "weight": 10 },
-        { "x": 64, "y": 0, "weight": 10 },
-        { "x": 96, "y": 0, "weight": 5 }
+        { "x": 64, "y": 0, "weight": 10 }
       ],
+      "details": [
+        { "x": 0, "y": 32, "weight": 10 },
+        { "x": 16, "y": 32, "weight": 5 }
+      ],
+      "borders": {
+        "n": [{ "x": 0, "y": 48, "weight": 10 }],
+        "s": [{ "x": 16, "y": 48, "weight": 10 }]
+      }
+    },
+    {
+      "id": "water",
+      "materials": [{ "x": 32, "y": 0, "weight": 10 }],
       "details": [
         { "x": 0, "y": 32, "weight": 10 },
         { "x": 16, "y": 32, "weight": 5 }
@@ -36,16 +48,10 @@ const tileOptionsJSON = `{
   "emptyTile": { "x": 0, "y": 64, "sideLength": 16 }
 }
 
+
 `;
 
-const chunkX0Y0: string[][] = [];
-for (let i = 0; i < 32; i++) {
-  let newRow: string[] = []
-  for (let j = 0; j < 32; j++) {
-    newRow.push("grass")
-  }
-  chunkX0Y0.push(newRow)
-}
+
 (async () => {
   const tileOptions: TileOptions = JSON.parse(tileOptionsJSON)
 
@@ -71,6 +77,16 @@ for (let i = 0; i < 32; i++) {
   */
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 6; j++) {
+      const chunkX0Y0: string[][] = [];
+      for (let k = 0; k < 32; k++) {
+        let newRow: string[] = []
+        for (let l = 0; l < 32; l++) {
+          const gX = i * 32 + k
+          const gY = j * 32 + l
+          newRow.push(FractalBrownianMotion(gX * 10, gY * 10, 2) < 0.5 ? "grass" : "water")
+        }
+        chunkX0Y0.push(newRow)
+      }
       nauvis.AddNewChunk({
         coord: { x: -2 + i, y: -2 + j },
         tiles: chunkX0Y0

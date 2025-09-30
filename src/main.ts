@@ -1,6 +1,7 @@
 import { Application, Assets, Container, ObservablePoint, Particle, ParticleContainer, ParticleProperties, Rectangle, Texture, TextureSource } from 'pixi.js';
 import { ChunkOptions, NauvisOptions, TileOptions, Point } from './interfaces';
 import { Biome } from './biomes';
+import { ContainerHolder } from './containerHolder';
 
 // https://shawnhargreaves.com/blog/detail-textures.html
 // https://factorio.com/blog/post/fff-214
@@ -13,7 +14,7 @@ export class Nauvis {
   world!: Container;
   biomes!: Record<string, Biome>
   tileTexture!: Texture;
-  chunks!: Record<string, ParticleContainer>;
+  chunks!: Record<string, ContainerHolder>;
   chunkTileSideLength!: number;
   emptyTileFrame!: Rectangle;
   particleProperties: ParticleProperties & Record<string, boolean> = {
@@ -61,7 +62,7 @@ export class Nauvis {
 
   Render() {
     this.world.removeChildren()
-    const visibleChunks: ParticleContainer[] = this.visibileChunks(this.world.position, this.world.scale, this.chunks)
+    const visibleChunks: Container[] = this.visibileChunks(this.world.position, this.world.scale, this.chunks)
     for (const chunk of visibleChunks) {
       this.world.addChild(chunk)
     }
@@ -69,10 +70,10 @@ export class Nauvis {
   }
 
   // Just return all chunks for right now
-  visibileChunks(position: ObservablePoint, scale: ObservablePoint, chunks: Record<string, ParticleContainer>): ParticleContainer[] {
-    let out: ParticleContainer[] = []
-    for (const [k, v] of Object.entries(chunks) as [string, ParticleContainer][]) {
-      out.push(v)
+  visibileChunks(position: ObservablePoint, scale: ObservablePoint, chunks: Record<string, ContainerHolder>): Container[] {
+    let out: Container[] = []
+    for (const [, v] of Object.entries(chunks) as [string, ContainerHolder][]) {
+      out.push(v.Base)
     }
     return out
   }
@@ -80,34 +81,33 @@ export class Nauvis {
 
   AddNewChunk(options: ChunkOptions) {
     const coordName = this.key(options.coord)
-    this.chunks[coordName] = new ParticleContainer({
-      dynamicProperties: this.particleProperties,
+    let container = new Container({
       x: options.coord.x * this.chunkTileSideLength,
       y: options.coord.y * this.chunkTileSideLength,
-      texture: this.tileTexture
     })
+    this.chunks[coordName] = new ContainerHolder(
+      container, this.tileTexture)
 
     // Now add the tile particles if passed in
     if (options.tiles != undefined) {
       for (let i = 0; i < this.chunkTileSideLength; i++) {
         for (let j = 0; j < this.chunkTileSideLength; j++) {
+          // Get the tile's frame on the texture
           const biome = biomeType(i, j, options.tiles, this.biomes)
           let frame: Rectangle;
           if (biome == null) {
             frame = this.pixelToUV(this.emptyTileFrame, this.tileTexture)
           } else {
-            //console.log(biome)
             frame = this.pixelToUV(
               biome.getTileFrame(
                 options.coord, { x: i, y: j }
               ), this.tileTexture
             )
           }
-          this.chunks[coordName].addParticle(new Particle({
+          // Add the tile particle to the tiles layer of the chunk container
+          this.chunks[coordName].AddTile(new Particle({
             texture: new Texture({
-              //frame: frame
-              // fracX, fracY, fracX width, fracY of width
-              frame: frame
+              frame: frame // fracX, fracY, fracX width, fracY of width
             }),
             x: i,
             y: j,
@@ -116,8 +116,44 @@ export class Nauvis {
           }));
         }
       }
+      // TODO: Loop over it again, this time adding borders if needed
+      for (let biome of Object.values(this.biomes)) {
+        for (const direction of this.chunks[coordName].Directions) {
+          // If no borders were given for this biome, don't loop through the whole chunk
+          if (biome.borderFrames[direction] == undefined) {
+            continue
+          }
+          for (let i = 0; i < this.chunkTileSideLength; i++) {
+            for (let j = 0; j < this.chunkTileSideLength; j++) {
+              switch (direction) {
+                // Different directions require different comparisons
+                case "n":
+                  if (options.tiles[i][j] != options.tiles[i][j + 1]) {
+                    const frame = this.pixelToUV(
+                      biome.borderFrames[direction][0].frame, this.tileTexture
+                    )
+                    this.chunks[coordName].AddBorder(new Particle({
+                      texture: new Texture({
+                        frame: frame // fracX, fracY, fracX width, fracY of width
+                      }),
+                      x: i,
+                      y: j,
+                      scaleX: 1 / frame.width, // height/width
+                      scaleY: 1 / frame.height,
+                    }), direction);
+                  }
+                  break;
+
+                default:
+                  break;
+              }
+            }
+          }
+        }
+      }
     }
   }
+
   pixelToUV(frame: Rectangle, tileTexture: Texture<TextureSource<any>>): Rectangle {
     const newX = frame.x / tileTexture.width
     const newY = frame.y / tileTexture.height
