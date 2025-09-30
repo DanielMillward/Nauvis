@@ -1,0 +1,15 @@
+{
+  "source": "../images/entities.png",
+  "textures": [
+    {
+      "id": "tree1",
+      "frames": [{ "x": 0, "y": 0, "width": 32, "height": 32 }],
+      "animationSequence": [0]
+    },
+    {
+      "id": "walk",
+      "frames": [{ "x": 0, "y": 0, "width": 32, "height": 32 }],
+      "animationSequence": [0]
+    }
+  ]
+}

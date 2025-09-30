@@ -1,0 +1,35 @@
+{
+  "source": "../assets/images/tiles.png",
+
+  "materialTileSideLength": 4,
+  "materialPixelSideLength": 32,
+
+  "detailsTileSideLength": 2,
+  "detailsPixelSideLength": 16,
+
+  "borderPixelSideLength": 16,
+
+  "chunkTileSideLength": 32,
+
+  "biomes": [
+    {
+      "id": "grass",
+      "materials": [
+        { "x": 0, "y": 0, "weight": 5 },
+        { "x": 32, "y": 0, "weight": 10 },
+        { "x": 64, "y": 0, "weight": 10 },
+        { "x": 96, "y": 0, "weight": 5 }
+      ],
+      "details": [
+        { "x": 0, "y": 32, "weight": 10 },
+        { "x": 16, "y": 32, "weight": 5 }
+      ],
+      "borders": {
+        "n": [{ "x": 0, "y": 48, "weight": 10 }],
+        "s": [{ "x": 16, "y": 48, "weight": 10 }]
+      }
+    }
+  ],
+
+  "emptyTile": { "x": 0, "y": 64, "sideLength": 16 }
+}
