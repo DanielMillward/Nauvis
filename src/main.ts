@@ -113,6 +113,8 @@ export class Nauvis {
             }),
             x: i,
             y: j,
+            // https://www.html5gamedevs.com/topic/48222-weird-flickering-in-scene-with-a-lot-of-sprites-roughly-1000/
+            // https://github.com/pixijs/pixijs/issues/6676
             scaleX: (1 / frame.width) * 1.001, // height/width. 1.1 Is to prevent flickering between
             scaleY: (1 / frame.height) * 1.001,
           }));
