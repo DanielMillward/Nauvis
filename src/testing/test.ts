@@ -75,20 +75,20 @@ const tileOptionsJSON = `
   })
 
   */
-  for (let i = 0; i < 6; i++) {
-    for (let j = 0; j < 6; j++) {
+  for (let cY = 0; cY < 6; cY++) {
+    for (let cX = 0; cX < 6; cX++) {
       const chunkX0Y0: string[][] = [];
-      for (let k = 0; k < 32; k++) {
+      for (let tY = 0; tY < 32; tY++) {
         let newRow: string[] = []
-        for (let l = 0; l < 32; l++) {
-          const gX = i * 32 + k
-          const gY = j * 32 + l
-          newRow.push(FractalBrownianMotion(gX * 10, gY * 10, 2) < 0.5 ? "grass" : "water")
+        for (let tX = 0; tX < 32; tX++) {
+          const gX = cX * 32 + tY
+          const gY = cY * 32 + tX
+          newRow.push(FractalBrownianMotion(gX * 10, gY * 10, 2) < 0.2 ? "grass" : "water")
         }
         chunkX0Y0.push(newRow)
       }
       nauvis.AddNewChunk({
-        coord: { x: -2 + i, y: -2 + j },
+        coord: { x: -2 + cY, y: -2 + cX },
         tiles: chunkX0Y0
       })
     }

@@ -92,17 +92,17 @@ export class Nauvis {
 
     // Now add the tile particles if passed in
     if (options.tiles != undefined) {
-      for (let i = 0; i < this.chunkTileSideLength; i++) {
-        for (let j = 0; j < this.chunkTileSideLength; j++) {
+      for (let y = 0; y < this.chunkTileSideLength; y++) {
+        for (let x = 0; x < this.chunkTileSideLength; x++) {
           // Get the tile's frame on the texture
-          const biome = biomeType(i, j, options.tiles, this.biomes)
+          const biome = biomeType(x, y, options.tiles, this.biomes)
           let frame: Rectangle;
           if (biome == null) {
             frame = this.pixelToUV(this.emptyTileFrame, this.tileTexture)
           } else {
             frame = this.pixelToUV(
               biome.getTileFrame(
-                options.coord, { x: i, y: j }
+                options.coord, { x: x, y: y }
               ), this.tileTexture
             )
           }
@@ -111,12 +111,12 @@ export class Nauvis {
             texture: new Texture({
               frame: frame // fracX, fracY, fracX width, fracY of width
             }),
-            x: i,
-            y: j,
+            x: x,
+            y: y,
             // https://www.html5gamedevs.com/topic/48222-weird-flickering-in-scene-with-a-lot-of-sprites-roughly-1000/
             // https://github.com/pixijs/pixijs/issues/6676
-            scaleX: (1 / frame.width) * 1.001, // height/width. 1.1 Is to prevent flickering between
-            scaleY: (1 / frame.height) * 1.001,
+            scaleX: (1 / frame.width) * 1.01, // height/width. 1.1 Is to prevent flickering between
+            scaleY: (1 / frame.height) * 1.01,
           }));
         }
       }
@@ -128,12 +128,13 @@ export class Nauvis {
           if (biome.borderFrames[direction] == undefined) {
             continue
           }
-          for (let i = 0; i < this.chunkTileSideLength; i++) {
-            for (let j = 0; j < this.chunkTileSideLength; j++) {
+          for (let x = 0; x < this.chunkTileSideLength; x++) {
+            for (let y = 0; y < this.chunkTileSideLength; y++) {
               switch (direction) {
                 // Different directions require different comparisons
                 case "n":
-                  if (options.tiles[i][j] != options.tiles[i][j + 1]) {
+
+                  if ((y < this.chunkTileSideLength - 1) && (options.tiles[y][x] != options.tiles[y + 1][x])) {
                     const frame = this.pixelToUV(
                       biome.borderFrames[direction][0].frame, this.tileTexture
                     )
@@ -141,8 +142,8 @@ export class Nauvis {
                       texture: new Texture({
                         frame: frame // fracX, fracY, fracX width, fracY of width
                       }),
-                      x: i,
-                      y: j,
+                      x: x,
+                      y: y,
                       scaleX: 1 / frame.width, // height/width
                       scaleY: 1 / frame.height,
                     }), direction);
@@ -216,19 +217,19 @@ export class Nauvis {
 
 
 export type { NauvisOptions, TileOptions } from './interfaces';
-function biomeType(i: number, j: number, tiles: string[][], biomes: Record<string, Biome>): Biome | null {
-  if (i >= tiles.length || tiles[i].length == undefined) {
+function biomeType(x: number, y: number, tiles: string[][], biomes: Record<string, Biome>): Biome | null {
+  if (y >= tiles.length || tiles[y].length == undefined) {
     return null;
   }
-  if (j >= tiles[i].length || tiles[i][j].length == undefined) {
+  if (x >= tiles[y].length || tiles[y][x].length == undefined) {
     return null;
   }
-  if (tiles[i][j] == "") {
+  if (tiles[y][x] == "") {
     return null
   }
-  if (biomes[tiles[i][j]] == undefined) {
+  if (biomes[tiles[y][x]] == undefined) {
     return null
   }
-  return biomes[tiles[i][j]]
+  return biomes[tiles[y][x]]
 }
 
