@@ -35,7 +35,8 @@ export interface WeightedSectionJSON {
 
 export interface ChunkOptions {
     coord: Point;
-    tiles?: string[][];
+
+    tiles?: string[][];/* Ordered by top left, (y,x). Meaning: The first array row has (x,y) == (x,0), and so on. */
 }
 
 export interface Point {

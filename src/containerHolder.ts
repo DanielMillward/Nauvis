@@ -1,10 +1,11 @@
-import { Container, Particle, ParticleContainer, ParticleProperties, Texture } from 'pixi.js';
+import { Container, Particle, ParticleContainer, ParticleProperties, Rectangle, Texture } from 'pixi.js';
 
-export class ContainerHolder {
+export class Chunk {
 
     private base: Container;
     private texture: Texture;
     private tiles: ParticleContainer;
+    public tileData: string[][]; // In (y,x) order
     private borders: Record<string, ParticleContainer>;
     private directions: string[] = ["n", "s", "e", "w"]
     particleProperties: ParticleProperties & Record<string, boolean> = {
@@ -14,7 +15,7 @@ export class ContainerHolder {
         color: false, // Static color
     }
 
-    constructor(baseContainer: Container, texture: Texture) {
+    constructor(baseContainer: Container, texture: Texture, chunkSize: number) {
         this.base = baseContainer;
         this.texture = texture;
         this.tiles = new ParticleContainer({
@@ -30,6 +31,14 @@ export class ContainerHolder {
             })
             this.base.addChild(this.borders[direction])
         }
+        this.tileData = []
+        for (let y = 0; y < chunkSize; y++) {
+            let newRow = []
+            for (let x = 0; x < chunkSize; x++) {
+                newRow.push("")
+            }
+            this.tileData.push(newRow)
+        }
     }
 
     public get Base(): Container {
@@ -40,8 +49,19 @@ export class ContainerHolder {
         return this.directions
     }
 
-    public AddTile(particle: Particle) {
-        this.tiles.addParticle(particle)
+    public AddTile(frame: Rectangle, x: number, y: number, biome: string) {
+        this.tiles.addParticle(new Particle({
+            texture: new Texture({
+                frame: frame // fracX, fracY, fracX width, fracY of width
+            }),
+            x: x,
+            y: y,
+            // https://www.html5gamedevs.com/topic/48222-weird-flickering-in-scene-with-a-lot-of-sprites-roughly-1000/
+            // https://github.com/pixijs/pixijs/issues/6676
+            scaleX: (1 / frame.width) * 1.01, // height/width. 1.1 Is to prevent flickering between
+            scaleY: (1 / frame.height) * 1.01,
+        }));
+        this.tileData[y][x] = biome
     }
 
     AddBorder(border: Particle, direction: string) {

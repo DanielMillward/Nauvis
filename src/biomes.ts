@@ -8,8 +8,10 @@ export class Biome {
     borderFrames: Record<string, WeightedFrame[]>
     chunkTileSize: number
     materialTileSize: number
+    id: string
 
-    constructor(tileOptions: TileOptions, biomeJson: BiomeJSON, chunkTileSize: number, materialTileSize: number) {
+    constructor(id: string, tileOptions: TileOptions, biomeJson: BiomeJSON, chunkTileSize: number, materialTileSize: number) {
+        this.id = id
         this.materialFrames = []
         this.detailFrames = []
         this.borderFrames = {}

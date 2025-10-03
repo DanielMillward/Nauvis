@@ -1,7 +1,7 @@
 import { Application, Assets, Container, ObservablePoint, Particle, ParticleContainer, ParticleProperties, Rectangle, Texture, TextureSource } from 'pixi.js';
 import { ChunkOptions, NauvisOptions, TileOptions, Point } from './interfaces';
 import { Biome } from './biomes';
-import { ContainerHolder } from './containerHolder';
+import { Chunk } from './containerHolder';
 
 // https://shawnhargreaves.com/blog/detail-textures.html
 // https://factorio.com/blog/post/fff-214
@@ -16,7 +16,7 @@ export class Nauvis {
   world!: Container;
   biomes!: Record<string, Biome>
   tileTexture!: Texture;
-  chunks!: Record<string, ContainerHolder>;
+  chunks!: Record<string, Chunk>;
   chunkTileSideLength!: number;
   emptyTileFrame!: Rectangle;
   particleProperties: ParticleProperties & Record<string, boolean> = {
@@ -72,9 +72,9 @@ export class Nauvis {
   }
 
   // Just return all chunks for right now
-  visibileChunks(position: ObservablePoint, scale: ObservablePoint, chunks: Record<string, ContainerHolder>): Container[] {
+  visibileChunks(position: ObservablePoint, scale: ObservablePoint, chunks: Record<string, Chunk>): Container[] {
     let out: Container[] = []
-    for (const [, v] of Object.entries(chunks) as [string, ContainerHolder][]) {
+    for (const [, v] of Object.entries(chunks) as [string, Chunk][]) {
       out.push(v.Base)
     }
     return out
@@ -85,39 +85,31 @@ export class Nauvis {
     const coordName = this.key(options.coord)
     let container = new Container({
       x: options.coord.x * this.chunkTileSideLength,
-      y: options.coord.y * this.chunkTileSideLength,
+      y: -options.coord.y * this.chunkTileSideLength, // y is flipped for some reason?
     })
-    this.chunks[coordName] = new ContainerHolder(
-      container, this.tileTexture)
+    this.chunks[coordName] = new Chunk(container, this.tileTexture, this.chunkTileSideLength)
 
     // Now add the tile particles if passed in
     if (options.tiles != undefined) {
-      for (let y = 0; y < this.chunkTileSideLength; y++) {
-        for (let x = 0; x < this.chunkTileSideLength; x++) {
+      for (let ltY = 0; ltY < this.chunkTileSideLength; ltY++) {
+        for (let ltX = 0; ltX < this.chunkTileSideLength; ltX++) {
           // Get the tile's frame on the texture
-          const biome = biomeType(x, y, options.tiles, this.biomes)
+          const biome = biomeType(ltX, ltY, options.tiles, this.biomes)
+          let biomeName: string;
           let frame: Rectangle;
           if (biome == null) {
             frame = this.pixelToUV(this.emptyTileFrame, this.tileTexture)
+            biomeName = ""
           } else {
             frame = this.pixelToUV(
               biome.getTileFrame(
-                options.coord, { x: x, y: y }
+                options.coord, { x: ltX, y: ltY }
               ), this.tileTexture
             )
+            biomeName = biome.id
           }
           // Add the tile particle to the tiles layer of the chunk container
-          this.chunks[coordName].AddTile(new Particle({
-            texture: new Texture({
-              frame: frame // fracX, fracY, fracX width, fracY of width
-            }),
-            x: x,
-            y: y,
-            // https://www.html5gamedevs.com/topic/48222-weird-flickering-in-scene-with-a-lot-of-sprites-roughly-1000/
-            // https://github.com/pixijs/pixijs/issues/6676
-            scaleX: (1 / frame.width) * 1.01, // height/width. 1.1 Is to prevent flickering between
-            scaleY: (1 / frame.height) * 1.01,
-          }));
+          this.chunks[coordName].AddTile(frame, ltX, ltY, biomeName)
         }
       }
       // TODO: Loop over it again, this time adding borders if needed]
@@ -128,13 +120,20 @@ export class Nauvis {
           if (biome.borderFrames[direction] == undefined) {
             continue
           }
-          for (let x = 0; x < this.chunkTileSideLength; x++) {
-            for (let y = 0; y < this.chunkTileSideLength; y++) {
+          // For each tile, check if itself should have a border
+          for (let ltY = 0; ltY < this.chunkTileSideLength; ltY++) {
+            for (let ltX = 0; ltX < this.chunkTileSideLength; ltX++) {
               switch (direction) {
                 // Different directions require different comparisons
                 case "n":
-
-                  if ((y < this.chunkTileSideLength - 1) && (options.tiles[y][x] != options.tiles[y + 1][x])) {
+                  const inLastRow = ltY == this.chunkTileSideLength - 1
+                  let currTileDiffBiome = false
+                  let tileBelowIsRightBiome = false
+                  if (!inLastRow) {
+                    currTileDiffBiome = options.tiles[ltY][ltX] != biome.id
+                    tileBelowIsRightBiome = options.tiles[ltY + 1][ltX] == biome.id
+                  }
+                  if (!inLastRow && currTileDiffBiome && tileBelowIsRightBiome) {
                     const frame = this.pixelToUV(
                       biome.borderFrames[direction][0].frame, this.tileTexture
                     )
@@ -142,11 +141,34 @@ export class Nauvis {
                       texture: new Texture({
                         frame: frame // fracX, fracY, fracX width, fracY of width
                       }),
-                      x: x,
-                      y: y,
-                      scaleX: 1 / frame.width, // height/width
-                      scaleY: 1 / frame.height,
+                      x: ltX,
+                      y: ltY,
+                      scaleX: (1 / frame.width) * 1.01, // height/width
+                      scaleY: (1 / frame.height) * 1.01,
                     }), direction);
+                  }
+                  // if y is at the southern border, need to check if tiles at top of southern chunk are different
+                  if (inLastRow && (options.tiles[ltY][ltX] != biome.id)) {
+                    const southChunkKey = this.key({ x: options.coord.x, y: options.coord.y - 1 })
+                    const southChunk = this.chunks[southChunkKey]
+                    if (southChunk != undefined) {
+                      const southNeighborTile = southChunk.tileData[0][ltX]
+                      if (southNeighborTile == biome.id) {
+                        const frame = this.pixelToUV(
+                          biome.borderFrames[direction][0].frame, this.tileTexture
+                        )
+                        this.chunks[coordName].AddBorder(new Particle({
+                          texture: new Texture({
+                            frame: frame // fracX, fracY, fracX width, fracY of width
+                          }),
+                          x: ltX,
+                          y: ltY,
+                          scaleX: (1 / frame.width) * 1.01, // height/width
+                          scaleY: (1 / frame.height) * 1.01,
+                        }), direction);
+                      }
+                    }
+
                   }
                   break;
 
@@ -155,6 +177,7 @@ export class Nauvis {
               }
             }
           }
+          // Check for borders against neighboring chunks?
         }
       }
     }
@@ -172,7 +195,7 @@ export class Nauvis {
     let out: Record<string, Biome> = {}
     for (let i = 0; i < tileOptions.biomes.length; i++) {
       const biomeJSON = tileOptions.biomes[i]
-      out[biomeJSON.id] = new Biome(tileOptions, biomeJSON, tChunkSize, tMaterialSize)
+      out[biomeJSON.id] = new Biome(biomeJSON.id, tileOptions, biomeJSON, tChunkSize, tMaterialSize)
     }
     return out
   }
