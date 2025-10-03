@@ -141,8 +141,83 @@ export class Nauvis {
               }
             }
           }
-
+          // make the neighbors update this biome/direction with new information
+          this.updateBorderSide(options.coord, biome, direction)
         }
+      }
+    }
+  }
+
+  updateBorderSide(newChunkCoord: Point, biome: Biome, direction: string) {
+    let currChunk!: Point;
+
+    for (let i = 0; i < this.chunkTileSideLength; i++) {
+      let newChunkTileRightBiome = false
+      let currTileDiffBiome = false
+      let currTileX = 0
+      let currTileY = 0
+      switch (direction) {
+        case "n":
+          // New chunk has appeared on the south
+          currChunk = { x: newChunkCoord.x, y: newChunkCoord.y + 1 }
+          if (this.chunks[key(currChunk)] == undefined || this.chunks[key(newChunkCoord)] == undefined) {
+            return
+          }
+          newChunkTileRightBiome = this.chunks[key(newChunkCoord)].tileData[0][i] == biome.id
+          currTileDiffBiome = this.chunks[key(currChunk)].tileData[this.chunks[key(currChunk)].tileData.length - 1][i] != biome.id
+          currTileX = i
+          currTileY = this.chunks[key(currChunk)].tileData[i].length - 1
+          break;
+        case "s":
+          // New chunk has appeared to the north
+          currChunk = { x: newChunkCoord.x, y: newChunkCoord.y - 1 }
+          if (this.chunks[key(currChunk)] == undefined || this.chunks[key(newChunkCoord)] == undefined) {
+            return
+          }
+          newChunkTileRightBiome = this.chunks[key(newChunkCoord)].tileData[this.chunks[key(newChunkCoord)].tileData.length - 1][i] == biome.id
+          currTileDiffBiome = this.chunks[key(currChunk)].tileData[0][i] != biome.id
+          currTileX = i
+          currTileY = 0
+          break;
+        case "e":
+          // New chunk has appeared to the west
+          currChunk = { x: newChunkCoord.x + 1, y: newChunkCoord.y }
+          if (this.chunks[key(currChunk)] == undefined || this.chunks[key(newChunkCoord)] == undefined) {
+            return
+          }
+          newChunkTileRightBiome = this.chunks[key(newChunkCoord)].tileData[i][this.chunks[key(newChunkCoord)].tileData[i].length - 1] == biome.id
+          currTileDiffBiome = this.chunks[key(currChunk)].tileData[i][0] != biome.id
+          currTileX = 0
+          currTileY = i
+          break;
+        case "w":
+          // New chunk has appeared to the east
+          currChunk = { x: newChunkCoord.x - 1, y: newChunkCoord.y }
+          if (this.chunks[key(currChunk)] == undefined || this.chunks[key(newChunkCoord)] == undefined) {
+            return
+          }
+          newChunkTileRightBiome = this.chunks[key(newChunkCoord)].tileData[i][0] == biome.id
+          currTileDiffBiome = this.chunks[key(currChunk)].tileData[i][this.chunks[key(currChunk)].tileData[i].length - 1] != biome.id
+          currTileX = this.chunks[key(currChunk)].tileData[i].length - 1
+          currTileY = i
+          break;
+        default:
+          break;
+      }
+
+      if (newChunkTileRightBiome && currTileDiffBiome) {
+        const frame = this.pixelToUV(
+          biome.borderFrames[direction][0].frame, this.tileTexture
+        )
+        this.chunks[key(currChunk)].AddBorder(new Particle({
+          texture: new Texture({
+            frame: frame // fracX, fracY, fracX width, fracY of width
+          }),
+          x: currTileX,
+          y: currTileY,
+          scaleX: (1 / frame.width) * 1.01, // height/width
+          scaleY: (1 / frame.height) * 1.01,
+        }), direction);
       }
     }
   }
@@ -165,7 +240,7 @@ export class Nauvis {
         break;
       case "s":
         onBorderEdge = tileCoord.y == 0
-        neighborChunk = chunks[key({ x: chunkCoord.x, y: chunkCoord.y - 1 })]
+        neighborChunk = chunks[key({ x: chunkCoord.x, y: chunkCoord.y + 1 })]
         neighborTileCoord = { x: tileCoord.x, y: chunkSize - 1 }
         if (!onBorderEdge) {
           neighborTileIsRightBiome = tiles[tileCoord.y - 1][tileCoord.x] == biomeId
@@ -191,9 +266,9 @@ export class Nauvis {
         break;
     }
 
-    return this.hasBorderLogic(onBorderEdge, neighborTileIsRightBiome, neighborChunk, neighborTileCoord, currTileDiffBiome, biomeId)
+    return this.borderLogic(onBorderEdge, neighborTileIsRightBiome, neighborChunk, neighborTileCoord, currTileDiffBiome, biomeId)
   }
-  hasBorderLogic(onBorderEdge: boolean, neighborTileIsRightBiome: boolean, neighborChunk: Chunk | undefined, neighborTileCoord: Point, currTileDiffBiome: boolean, biomeId: string): boolean {
+  borderLogic(onBorderEdge: boolean, neighborTileIsRightBiome: boolean, neighborChunk: Chunk | undefined, neighborTileCoord: Point, currTileDiffBiome: boolean, biomeId: string): boolean {
     if (!onBorderEdge && currTileDiffBiome && neighborTileIsRightBiome) {
       return true
     }
@@ -282,4 +357,6 @@ function biomeType(x: number, y: number, tiles: string[][], biomes: Record<strin
   }
   return biomes[tiles[y][x]]
 }
+
+
 

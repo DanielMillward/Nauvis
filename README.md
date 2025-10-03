@@ -1,6 +1,7 @@
 TODO list:
 - borders between tiles (main.ts:119)
-    - borders between chunk boundaries?
+    - refactor the code so direction-specific information is encoded in a data struct we reuse
+    - ^^ Maybe make a function that gets a tile neighbor given a chunk/tile coord and direction?
 - only render chunks in view
 - make tiles updateable
 - fix weird blank spots that show when zooming sometimes

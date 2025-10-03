@@ -67,25 +67,27 @@ const tileOptionsJSON = `
   //nauvis.Render()
 
   /*
+
   nauvis.AddNewChunk({
-    coord: { x: 0, y: 0 },
+    coord: { x: 0, y: 1 },
+    tiles: [["grass", "water", "water", "water"],
+    ["water", "water", "water", "water"],
+    ["water", "water", "water", "water"],
+    ["water", "water", "water", "water"],]
+  })
+  nauvis.AddNewChunk({
+    coord: { x: 1, y: 1 },
     tiles: [["grass", "grass", "grass", "water"],
     ["grass", "grass", "water", "grass"],
     ["grass", "water", "grass", "grass"],
     ["water", "grass", "grass", "grass"],]
   })
-  nauvis.AddNewChunk({
-    coord: { x: 0, y: 1 },
-    tiles: [["water", "water", "water", "water"],
-    ["water", "water", "water", "water"],
-    ["water", "water", "water", "water"],
-    ["water", "water", "water", "water"],]
-  })
 
 
-    
+  
 
   */
+
   for (let cY = -3; cY < 1; cY++) {
     for (let cX = -3; cX < 1; cX++) {
       let chunkX0Y0: string[][] = [];
@@ -98,21 +100,19 @@ const tileOptionsJSON = `
           if (cY == 1 && cX == 1) {
             newRow.push("water")
           } else {
-            newRow.push(FractalBrownianMotion(gX * 10, gY * 10, 2) < 0.2 ? "grass" : "water")
+            newRow.push(FractalBrownianMotion(gX * 10, gY * 10, 5) < 0.2 ? "grass" : "water")
           }
         }
         chunkX0Y0.push(newRow)
       }
       // testing chunk borders
-      chunkX0Y0[chunkX0Y0.length - 1] = ["water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water"]
+      //chunkX0Y0[chunkX0Y0.length - 1] = ["water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water", "water"]
       nauvis.AddNewChunk({
         coord: { x: cX, y: cY },
         tiles: chunkX0Y0
       })
     }
   }
-
-
 
   nauvis.Render()
   window.addEventListener("wheel", (e) => {
