@@ -82,14 +82,14 @@ export class Nauvis {
 
 
   AddNewChunk(options: ChunkOptions) {
-    const coordName = this.key(options.coord)
+    const coordName = key(options.coord)
     let container = new Container({
       x: options.coord.x * this.chunkTileSideLength,
       y: -options.coord.y * this.chunkTileSideLength, // y is flipped for some reason?
     })
     this.chunks[coordName] = new Chunk(container, this.tileTexture, this.chunkTileSideLength)
 
-    // Now add the tile particles if passed in
+    /* ----- TILES ----- */
     if (options.tiles != undefined) {
       for (let ltY = 0; ltY < this.chunkTileSideLength; ltY++) {
         for (let ltX = 0; ltX < this.chunkTileSideLength; ltX++) {
@@ -112,8 +112,8 @@ export class Nauvis {
           this.chunks[coordName].AddTile(frame, ltX, ltY, biomeName)
         }
       }
-      // TODO: Loop over it again, this time adding borders if needed]
-      // TODO: Check if neighboring chunks exist, if so update your/their borders
+
+      /* ----- BORDERS ----- */
       for (let biome of Object.values(this.biomes)) {
         for (const direction of this.chunks[coordName].Directions) {
           // If no borders were given for this biome, don't loop through the whole chunk
@@ -123,64 +123,90 @@ export class Nauvis {
           // For each tile, check if itself should have a border
           for (let ltY = 0; ltY < this.chunkTileSideLength; ltY++) {
             for (let ltX = 0; ltX < this.chunkTileSideLength; ltX++) {
-              switch (direction) {
-                // Different directions require different comparisons
-                case "n":
-                  const inLastRow = ltY == this.chunkTileSideLength - 1
-                  let currTileDiffBiome = false
-                  let tileBelowIsRightBiome = false
-                  if (!inLastRow) {
-                    currTileDiffBiome = options.tiles[ltY][ltX] != biome.id
-                    tileBelowIsRightBiome = options.tiles[ltY + 1][ltX] == biome.id
-                  }
-                  if (!inLastRow && currTileDiffBiome && tileBelowIsRightBiome) {
-                    const frame = this.pixelToUV(
-                      biome.borderFrames[direction][0].frame, this.tileTexture
-                    )
-                    this.chunks[coordName].AddBorder(new Particle({
-                      texture: new Texture({
-                        frame: frame // fracX, fracY, fracX width, fracY of width
-                      }),
-                      x: ltX,
-                      y: ltY,
-                      scaleX: (1 / frame.width) * 1.01, // height/width
-                      scaleY: (1 / frame.height) * 1.01,
-                    }), direction);
-                  }
-                  // if y is at the southern border, need to check if tiles at top of southern chunk are different
-                  if (inLastRow && (options.tiles[ltY][ltX] != biome.id)) {
-                    const southChunkKey = this.key({ x: options.coord.x, y: options.coord.y - 1 })
-                    const southChunk = this.chunks[southChunkKey]
-                    if (southChunk != undefined) {
-                      const southNeighborTile = southChunk.tileData[0][ltX]
-                      if (southNeighborTile == biome.id) {
-                        const frame = this.pixelToUV(
-                          biome.borderFrames[direction][0].frame, this.tileTexture
-                        )
-                        this.chunks[coordName].AddBorder(new Particle({
-                          texture: new Texture({
-                            frame: frame // fracX, fracY, fracX width, fracY of width
-                          }),
-                          x: ltX,
-                          y: ltY,
-                          scaleX: (1 / frame.width) * 1.01, // height/width
-                          scaleY: (1 / frame.height) * 1.01,
-                        }), direction);
-                      }
-                    }
-
-                  }
-                  break;
-
-                default:
-                  break;
+              const tileCoord: Point = { x: ltX, y: ltY }
+              const hasBorder = this.hasBorder(this.chunkTileSideLength, this.chunks, options.tiles, tileCoord, options.coord, biome.id, direction)
+              if (hasBorder) {
+                const frame = this.pixelToUV(
+                  biome.borderFrames[direction][0].frame, this.tileTexture
+                )
+                this.chunks[coordName].AddBorder(new Particle({
+                  texture: new Texture({
+                    frame: frame // fracX, fracY, fracX width, fracY of width
+                  }),
+                  x: ltX,
+                  y: ltY,
+                  scaleX: (1 / frame.width) * 1.01, // height/width
+                  scaleY: (1 / frame.height) * 1.01,
+                }), direction);
               }
             }
           }
-          // Check for borders against neighboring chunks?
+
         }
       }
     }
+  }
+
+  hasBorder(chunkSize: number, chunks: Record<string, Chunk>, tiles: string[][], tileCoord: Point, chunkCoord: Point, biomeId: string, direction: string) {
+    let onBorderEdge: boolean = false
+    let neighborChunk!: Chunk;
+    let neighborTileCoord!: Point;
+    let neighborTileIsRightBiome: boolean = false
+    let currTileDiffBiome = tiles[tileCoord.y][tileCoord.x] != biomeId
+    switch (direction) {
+      // Different directions require different comparisons
+      case "n":
+        onBorderEdge = tileCoord.y == chunkSize - 1
+        neighborChunk = chunks[key({ x: chunkCoord.x, y: chunkCoord.y - 1 })]
+        neighborTileCoord = { x: tileCoord.x, y: 0 }
+        if (!onBorderEdge) {
+          neighborTileIsRightBiome = tiles[tileCoord.y + 1][tileCoord.x] == biomeId
+        }
+        break;
+      case "s":
+        onBorderEdge = tileCoord.y == 0
+        neighborChunk = chunks[key({ x: chunkCoord.x, y: chunkCoord.y - 1 })]
+        neighborTileCoord = { x: tileCoord.x, y: chunkSize - 1 }
+        if (!onBorderEdge) {
+          neighborTileIsRightBiome = tiles[tileCoord.y - 1][tileCoord.x] == biomeId
+        }
+        break;
+      case "e":
+        onBorderEdge = tileCoord.x == 0
+        neighborChunk = chunks[key({ x: chunkCoord.x - 1, y: chunkCoord.y })]
+        neighborTileCoord = { x: tileCoord.x - 1, y: tileCoord.y }
+        if (!onBorderEdge) {
+          neighborTileIsRightBiome = tiles[tileCoord.y][tileCoord.x - 1] == biomeId
+        }
+        break;
+      case "w":
+        onBorderEdge = tileCoord.x == chunkSize - 1
+        neighborChunk = chunks[key({ x: chunkCoord.x + 1, y: chunkCoord.y })]
+        neighborTileCoord = { x: tileCoord.x + 1, y: tileCoord.y }
+        if (!onBorderEdge) {
+          neighborTileIsRightBiome = tiles[tileCoord.y][tileCoord.x + 1] == biomeId
+        }
+        break;
+      default:
+        break;
+    }
+
+    return this.hasBorderLogic(onBorderEdge, neighborTileIsRightBiome, neighborChunk, neighborTileCoord, currTileDiffBiome, biomeId)
+  }
+  hasBorderLogic(onBorderEdge: boolean, neighborTileIsRightBiome: boolean, neighborChunk: Chunk | undefined, neighborTileCoord: Point, currTileDiffBiome: boolean, biomeId: string): boolean {
+    if (!onBorderEdge && currTileDiffBiome && neighborTileIsRightBiome) {
+      return true
+    }
+    // if y is at the southern border, need to check if tiles at top of southern chunk are different
+    if (onBorderEdge && currTileDiffBiome) {
+      if (neighborChunk != undefined) {
+        const neighborTile = neighborChunk.tileData[neighborTileCoord.y][neighborTileCoord.x]
+        if (neighborTile == biomeId) {
+          return true
+        }
+      }
+    }
+    return false
   }
 
   pixelToUV(frame: Rectangle, tileTexture: Texture<TextureSource<any>>): Rectangle {
@@ -201,7 +227,6 @@ export class Nauvis {
   }
 
 
-  key = (point: Point) => `${point.x},${point.y}`; // no allocs except this tiny string
 
   // XorShift32 for selecting chunk material types? hash2d_float01(i, j)
 
@@ -237,6 +262,8 @@ export class Nauvis {
   }
 
 }
+
+const key = (point: Point) => `${point.x},${point.y}`; // no allocs except this tiny string
 
 
 export type { NauvisOptions, TileOptions } from './interfaces';

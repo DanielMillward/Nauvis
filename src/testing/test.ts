@@ -20,14 +20,19 @@ const tileOptionsJSON = `
     {
       "id": "grass",
       "materials": [
-        { "x": 64, "y": 0, "weight": 10 }
+        { "x": 64, "y": 0, "weight": 10 },
+         { "x": 96, "y": 0, "weight": 10 },
+          { "x": 128, "y": 0, "weight": 10 }
       ],
       "details": [
         { "x": 0, "y": 32, "weight": 10 },
         { "x": 16, "y": 32, "weight": 5 }
       ],
       "borders": {
-        "n": [{ "x": 0, "y": 48, "weight": 10 }]
+        "n": [{ "x": 0, "y": 48, "weight": 10 }],
+        "s": [{ "x": 16, "y": 48, "weight": 10 }],
+        "e": [{ "x": 32, "y": 48, "weight": 10 }],
+        "w": [{ "x": 48, "y": 48, "weight": 10 }]
       }
     },
     {
@@ -78,10 +83,9 @@ const tileOptionsJSON = `
   })
 
 
-  
+    
 
   */
-
   for (let cY = -3; cY < 1; cY++) {
     for (let cX = -3; cX < 1; cX++) {
       let chunkX0Y0: string[][] = [];
@@ -107,6 +111,7 @@ const tileOptionsJSON = `
       })
     }
   }
+
 
 
   nauvis.Render()
