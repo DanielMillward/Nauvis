@@ -60,6 +60,13 @@ export class Nauvis {
 
     // Instantiate chunks
     this.chunks = {}
+
+    // Watch for pointer movement
+    this.app.stage.eventMode = 'static';
+    this.app.stage.hitArea = this.app.screen;
+    this.app.stage.addEventListener('pointermove', (e) => {
+      console.log(e.getLocalPosition(e.currentTarget.getChildAt(0)))
+    });
   }
 
   Render() {
